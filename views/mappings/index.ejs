@@ -1,0 +1,109 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Mapping Device &rarr; Aplikasi</h1>
+    <p class="text-muted mb-0">Tentukan aplikasi Laravel mana yang menerima data dari setiap mesin.</p>
+  </div>
+</div>
+
+<% if (errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0 small"><% errors.forEach((error) => { %><li><%= error %></li><% }); %></ul>
+  </div>
+<% } %>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-plus-circle me-1"></i> Tambah Mapping</div>
+      <div class="card-body">
+        <% if (!devices.length || !apps.length) { %>
+          <div class="alert alert-warning small mb-0">
+            Butuh minimal satu mesin <strong>ACTIVE</strong> dan satu aplikasi <strong>ACTIVE</strong> sebelum
+            membuat mapping.
+          </div>
+        <% } else { %>
+          <form method="POST" action="/admin/mappings">
+            <div class="mb-3">
+              <label class="form-label">Mesin</label>
+              <select name="device_id" class="form-select" required>
+                <option value="">-- pilih mesin --</option>
+                <% devices.forEach((device) => { %>
+                  <option value="<%= device.id %>"><%= device.name %> (<%= device.sn %>)</option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Aplikasi Target</label>
+              <select name="app_id" class="form-select" required>
+                <option value="">-- pilih aplikasi --</option>
+                <% apps.forEach((app) => { %>
+                  <option value="<%= app.id %>"><%= app.app_name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-link-45deg me-1"></i> Simpan Mapping
+            </button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white">
+        <form method="GET" action="/admin/mappings" class="d-flex gap-2">
+          <input type="text" name="search" class="form-control form-control-sm"
+                 value="<%= filters.search %>" placeholder="Cari mesin atau aplikasi">
+          <button type="submit" class="btn btn-secondary btn-sm text-nowrap">
+            <i class="bi bi-search me-1"></i> Filter
+          </button>
+          <a href="/admin/mappings" class="btn btn-outline-secondary btn-sm text-nowrap">Reset</a>
+        </form>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Mesin</th>
+              <th>Aplikasi Target</th>
+              <th>Dibuat</th>
+              <th class="text-end">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!mappings.length) { %>
+              <tr><td colspan="5" class="text-center text-muted py-4">Belum ada mapping.</td></tr>
+            <% } %>
+            <% mappings.forEach((mapping) => { %>
+              <tr>
+                <td><%= mapping.id %></td>
+                <td>
+                  <div class="fw-semibold"><%= mapping.device_name %></div>
+                  <code class="small"><%= mapping.device_sn %></code>
+                </td>
+                <td>
+                  <div class="fw-semibold"><%= mapping.app_name %></div>
+                  <span class="text-muted small text-break"><%= mapping.webhook_url %></span>
+                </td>
+                <td class="small text-muted"><%= mapping.created_at %></td>
+                <td class="text-end">
+                  <form method="POST" action="/admin/mappings/<%= mapping.id %>?_method=DELETE" class="d-inline"
+                        data-confirm="Hapus mapping ini?">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,106 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Log Absensi</h1>
+    <p class="text-muted mb-0">Semua data absensi mentah yang diterima dari mesin fingerprint.</p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <form method="GET" action="/admin/attendance-logs" class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label small mb-1">Mesin</label>
+        <select name="device_sn" class="form-select form-select-sm">
+          <option value="">Semua mesin</option>
+          <% devices.forEach((device) => { %>
+            <option value="<%= device.sn %>" <%= filters.device_sn === device.sn ? 'selected' : '' %>>
+              <%= device.name %> (<%= device.sn %>)
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Semua</option>
+          <% ['PENDING', 'SUCCESS', 'FAILED', 'PARTIAL'].forEach((option) => { %>
+            <option value="<%= option %>" <%= filters.status === option ? 'selected' : '' %>><%= option %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">User</label>
+        <input type="text" name="user" class="form-control form-control-sm" value="<%= filters.user %>"
+               placeholder="PIN / User ID">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Dari</label>
+        <input type="date" name="dateFrom" class="form-control form-control-sm" value="<%= filters.dateFrom %>">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Sampai</label>
+        <input type="date" name="dateTo" class="form-control form-control-sm" value="<%= filters.dateTo %>">
+      </div>
+      <div class="col-6 col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-secondary btn-sm w-100"><i class="bi bi-search"></i></button>
+      </div>
+      <div class="col-12">
+        <a href="/admin/attendance-logs" class="btn btn-link btn-sm p-0">Reset filter</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Mesin</th>
+          <th>User</th>
+          <th>Waktu Absen</th>
+          <th>Verify</th>
+          <th>In/Out</th>
+          <th>Status Forward</th>
+          <th>Diterima</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!rows.length) { %>
+          <tr><td colspan="9" class="text-center text-muted py-4">Tidak ada log ditemukan.</td></tr>
+        <% } %>
+        <% rows.forEach((log) => { %>
+          <tr>
+            <td><%= log.id %></td>
+            <td><code><%= log.device_sn %></code></td>
+            <td class="fw-semibold"><%= log.user_id_finger %></td>
+            <td class="small"><%= log.timestamp %></td>
+            <td class="small"><%= log.verify_mode || '-' %></td>
+            <td class="small"><%= log.in_out_mode || '-' %></td>
+            <td>
+              <%- include('../partials/status', { status: log.forward_status }) %>
+              <% if (log.response_code) { %>
+                <span class="badge text-bg-light border"><%= log.response_code %></span>
+              <% } %>
+            </td>
+            <td class="small text-muted"><%= log.created_at %></td>
+            <td class="text-end">
+              <a href="/admin/attendance-logs/<%= log.id %>" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body pt-0">
+    <%- include('../partials/pagination') %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

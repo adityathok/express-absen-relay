@@ -1,0 +1,90 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Manajemen Mesin</h1>
+    <p class="text-muted mb-0">Daftar mesin fingerprint yang diizinkan mengirim data ke server ini.</p>
+  </div>
+  <a href="/admin/devices/create" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Tambah Mesin
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <form method="GET" action="/admin/devices" class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label small mb-1">Cari</label>
+        <input type="text" name="search" class="form-control form-control-sm"
+               value="<%= filters.search %>" placeholder="Serial number, nama, atau lokasi">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Semua</option>
+          <option value="ACTIVE" <%= filters.status === 'ACTIVE' ? 'selected' : '' %>>ACTIVE</option>
+          <option value="INACTIVE" <%= filters.status === 'INACTIVE' ? 'selected' : '' %>>INACTIVE</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-secondary btn-sm w-100">
+          <i class="bi bi-search me-1"></i> Filter
+        </button>
+        <a href="/admin/devices" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Serial Number</th>
+          <th>Nama</th>
+          <th>Lokasi</th>
+          <th>IP</th>
+          <th>Status</th>
+          <th>Terakhir Terlihat</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!rows.length) { %>
+          <tr><td colspan="8" class="text-center text-muted py-4">Belum ada mesin terdaftar.</td></tr>
+        <% } %>
+        <% rows.forEach((device) => { %>
+          <tr>
+            <td><%= device.id %></td>
+            <td><code><%= device.sn %></code></td>
+            <td class="fw-semibold"><%= device.name %></td>
+            <td><%= device.location || '-' %></td>
+            <td><%= device.ip_address || '-' %></td>
+            <td>
+              <span class="badge text-bg-<%= device.status === 'ACTIVE' ? 'success' : 'secondary' %>">
+                <%= device.status %>
+              </span>
+            </td>
+            <td class="small text-muted"><%= device.last_seen_at || 'belum pernah' %></td>
+            <td class="text-end">
+              <a href="/admin/devices/<%= device.id %>/edit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="POST" action="/admin/devices/<%= device.id %>?_method=DELETE" class="d-inline"
+                    data-confirm="Hapus mesin <%= device.name %>? Semua log terkait tetap tersimpan.">
+                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body pt-0">
+    <%- include('../partials/pagination') %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

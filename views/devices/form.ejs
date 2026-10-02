@@ -1,0 +1,65 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0"><%= title %></h1>
+  <a href="/admin/devices" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Kembali
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <% if (errors.length) { %>
+          <div class="alert alert-danger">
+            <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Periksa kembali input:</div>
+            <ul class="mb-0 small">
+              <% errors.forEach((error) => { %><li><%= error %></li><% }); %>
+            </ul>
+          </div>
+        <% } %>
+
+        <form method="POST" action="<%= action %>">
+          <div class="mb-3">
+            <label class="form-label">Serial Number <span class="text-danger">*</span></label>
+            <input type="text" name="sn" class="form-control" value="<%= device.sn || '' %>"
+                   maxlength="100" required placeholder="cth: 1234567890">
+            <div class="form-text">Harus sama persis dengan SN yang dikirim mesin.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nama Mesin <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="<%= device.name || '' %>"
+                   maxlength="150" required placeholder="cth: Mesin Lobby Utama">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Lokasi</label>
+              <input type="text" name="location" class="form-control" value="<%= device.location || '' %>"
+                     maxlength="150" placeholder="cth: Gedung A - Lantai 1">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">IP Address</label>
+              <input type="text" name="ip_address" class="form-control" value="<%= device.ip_address || '' %>"
+                     maxlength="45" placeholder="cth: 192.168.1.201">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+              <option value="ACTIVE" <%= device.status === 'ACTIVE' ? 'selected' : '' %>>ACTIVE</option>
+              <option value="INACTIVE" <%= device.status === 'INACTIVE' ? 'selected' : '' %>>INACTIVE</option>
+            </select>
+            <div class="form-text">Mesin INACTIVE akan ditolak saat mengirim data.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan</button>
+            <a href="/admin/devices" class="btn btn-outline-secondary">Batal</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

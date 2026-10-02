@@ -1,0 +1,5 @@
+<%
+  const STATUS_BADGE = { SUCCESS: 'success', FAILED: 'danger', PENDING: 'warning', PARTIAL: 'info' };
+  const badge = STATUS_BADGE[status] || 'secondary';
+%>
+<span class="badge text-bg-<%= badge %>"><%= status %></span>

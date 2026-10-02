@@ -1,0 +1,108 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Detail Log Absensi #<%= log.id %></h1>
+  <a href="/admin/attendance-logs" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Kembali
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-info-circle me-1"></i> Informasi</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Serial Number</dt>
+          <dd class="col-7"><code><%= log.device_sn %></code></dd>
+
+          <dt class="col-5 text-muted">User (PIN)</dt>
+          <dd class="col-7 fw-semibold"><%= log.user_id_finger %></dd>
+
+          <dt class="col-5 text-muted">Waktu Absen</dt>
+          <dd class="col-7"><%= log.timestamp %></dd>
+
+          <dt class="col-5 text-muted">Verify Mode</dt>
+          <dd class="col-7"><%= log.verify_mode || '-' %></dd>
+
+          <dt class="col-5 text-muted">In/Out Mode</dt>
+          <dd class="col-7"><%= log.in_out_mode || '-' %></dd>
+
+          <dt class="col-5 text-muted">Status Forward</dt>
+          <dd class="col-7"><%- include('../partials/status', { status: log.forward_status }) %></dd>
+
+          <dt class="col-5 text-muted">Response Code</dt>
+          <dd class="col-7"><%= log.response_code || '-' %></dd>
+
+          <dt class="col-5 text-muted">Diterima</dt>
+          <dd class="col-7"><%= log.created_at %></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-file-code me-1"></i> Raw Payload</div>
+      <div class="card-body">
+        <pre class="bg-dark text-light p-3 rounded small mb-0" style="white-space: pre-wrap;"><code><%= log.raw_payload || '(kosong)' %></code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-header bg-white fw-semibold"><i class="bi bi-send me-1"></i> Pengiriman ke Aplikasi Target</div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Aplikasi</th>
+          <th>Status</th>
+          <th>HTTP</th>
+          <th>Retry</th>
+          <th>Terakhir Dicoba</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!forwards.length) { %>
+          <tr><td colspan="7" class="text-center text-muted py-4">
+            Tidak ada target aplikasi (mapping belum diatur untuk mesin ini).
+          </td></tr>
+        <% } %>
+        <% forwards.forEach((forward) => { %>
+          <tr>
+            <td><%= forward.id %></td>
+            <td>
+              <div class="fw-semibold"><%= forward.app_name %></div>
+              <span class="text-muted small text-break"><%= forward.webhook_url %></span>
+            </td>
+            <td><%- include('../partials/status', { status: forward.status }) %></td>
+            <td><code><%= forward.http_code || '-' %></code></td>
+            <td><%= forward.retry_count %></td>
+            <td class="small text-muted"><%= forward.last_attempt_at || 'belum' %></td>
+            <td class="text-end">
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      data-response-view
+                      data-app="<%= forward.app_name %>"
+                      data-http="<%= forward.http_code || '-' %>"
+                      data-response="<%= forward.response_body || '' %>">
+                <i class="bi bi-card-text"></i>
+              </button>
+              <form method="POST" action="/admin/forward-logs/<%= forward.id %>/retry" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="Kirim ulang">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/response-modal') %>
+<%- include('../partials/footer') %>

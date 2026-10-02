@@ -1,0 +1,86 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0"><%= title %></h1>
+  <a href="/admin/apps" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Kembali
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <% if (errors.length) { %>
+          <div class="alert alert-danger">
+            <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Periksa kembali input:</div>
+            <ul class="mb-0 small">
+              <% errors.forEach((error) => { %><li><%= error %></li><% }); %>
+            </ul>
+          </div>
+        <% } %>
+
+        <form method="POST" action="<%= action %>">
+          <div class="mb-3">
+            <label class="form-label">Nama Aplikasi <span class="text-danger">*</span></label>
+            <input type="text" name="app_name" class="form-control" value="<%= app.app_name || '' %>"
+                   maxlength="150" required placeholder="cth: Absensi HRIS">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Webhook URL <span class="text-danger">*</span></label>
+            <input type="url" name="webhook_url" class="form-control" value="<%= app.webhook_url || '' %>"
+                   maxlength="500" required placeholder="https://hris.example.com/api/attendance/webhook">
+            <div class="form-text">Endpoint Laravel yang menerima HTTP POST JSON.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Secret Key <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <input type="text" name="secret_key" id="secret-key" class="form-control font-monospace"
+                     value="<%= app.secret_key || '' %>" required>
+              <button type="button" class="btn btn-outline-secondary" data-generate-secret="#secret-key">
+                <i class="bi bi-shuffle me-1"></i> Generate
+              </button>
+            </div>
+            <div class="form-text">
+              Dikirim sebagai header <code>X-Relay-Secret</code> dan dipakai untuk HMAC-SHA256
+              (<code>X-Relay-Signature</code>).
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+              <option value="ACTIVE" <%= app.status === 'ACTIVE' ? 'selected' : '' %>>ACTIVE</option>
+              <option value="INACTIVE" <%= app.status === 'INACTIVE' ? 'selected' : '' %>>INACTIVE</option>
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan</button>
+            <a href="/admin/apps" class="btn btn-outline-secondary">Batal</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm bg-body">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-info-circle me-1"></i> Contoh Verifikasi (Laravel)
+      </div>
+      <div class="card-body small">
+        <p class="text-muted mb-2">Verifikasi di sisi Laravel:</p>
+        <pre class="bg-dark text-light p-2 rounded small mb-0"><code>$signature = 'sha256=' . hash_hmac(
+    'sha256',
+    $request-&gt;getContent(),
+    $secret
+);
+abort_unless(hash_equals(
+    $signature,
+    $request-&gt;header('X-Relay-Signature')
+), 401);</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

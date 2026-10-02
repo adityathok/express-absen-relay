@@ -1,0 +1,34 @@
+{
+  "name": "express-absen-relay",
+  "version": "1.0.0",
+  "description": "Fingerprint push receiver & webhook relay middleware (Express + MySQL + Bootstrap)",
+  "keywords": [
+    "expressjs"
+  ],
+  "license": "ISC",
+  "author": "]adityathok",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js",
+    "setup": "node scripts/setup.js",
+    "reset-password": "node scripts/reset-password.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "body-parser": "^2.3.0",
+    "connect-flash": "^0.1.1",
+    "dotenv": "^18.0.5",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "method-override": "^3.0.0",
+    "mysql2": "^3.24.5",
+    "node-cron": "^4.6.0",
+    "socket.io": "^4.8.4"
+  }
+}

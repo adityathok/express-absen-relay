@@ -1,0 +1,110 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Log Pengiriman</h1>
+    <p class="text-muted mb-0">Status pengiriman data absensi ke setiap aplikasi Laravel.</p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <form method="GET" action="/admin/forward-logs" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small mb-1">Cari</label>
+        <input type="text" name="search" class="form-control form-control-sm" value="<%= filters.search %>"
+               placeholder="Serial number, user, atau aplikasi">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Aplikasi</label>
+        <select name="appId" class="form-select form-select-sm">
+          <option value="">Semua aplikasi</option>
+          <% apps.forEach((app) => { %>
+            <option value="<%= app.id %>" <%= String(filters.appId) === String(app.id) ? 'selected' : '' %>>
+              <%= app.app_name %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Semua</option>
+          <% ['PENDING', 'SUCCESS', 'FAILED'].forEach((option) => { %>
+            <option value="<%= option %>" <%= filters.status === option ? 'selected' : '' %>><%= option %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-secondary btn-sm w-100"><i class="bi bi-search me-1"></i> Filter</button>
+      </div>
+      <div class="col-12">
+        <a href="/admin/forward-logs" class="btn btn-link btn-sm p-0">Reset filter</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Log Absensi</th>
+          <th>Mesin</th>
+          <th>User</th>
+          <th>Aplikasi</th>
+          <th>Status</th>
+          <th>HTTP</th>
+          <th>Retry</th>
+          <th>Terakhir</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!rows.length) { %>
+          <tr><td colspan="10" class="text-center text-muted py-4">Tidak ada log pengiriman.</td></tr>
+        <% } %>
+        <% rows.forEach((row) => { %>
+          <tr>
+            <td><%= row.id %></td>
+            <td>
+              <a href="/admin/attendance-logs/<%= row.attendance_log_id %>">#<%= row.attendance_log_id %></a>
+              <div class="small text-muted"><%= row.attendance_time %></div>
+            </td>
+            <td><code><%= row.device_sn %></code></td>
+            <td><%= row.user_id_finger %></td>
+            <td class="fw-semibold"><%= row.app_name %></td>
+            <td><%- include('../partials/status', { status: row.status }) %></td>
+            <td><code><%= row.http_code || '-' %></code></td>
+            <td><%= row.retry_count %></td>
+            <td class="small text-muted"><%= row.last_attempt_at || 'belum' %></td>
+            <td class="text-end text-nowrap">
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      data-response-view
+                      data-app="<%= row.app_name %>"
+                      data-http="<%= row.http_code || '-' %>"
+                      data-response="<%= row.response_body || '' %>">
+                <i class="bi bi-card-text"></i>
+              </button>
+              <% if (row.status === 'FAILED') { %>
+                <form method="POST" action="/admin/forward-logs/<%= row.id %>/retry" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-primary" title="Kirim ulang sekarang">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body pt-0">
+    <%- include('../partials/pagination') %>
+  </div>
+</div>
+
+<%- include('../partials/response-modal') %>
+<%- include('../partials/footer') %>
