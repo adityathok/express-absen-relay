@@ -210,6 +210,63 @@ pre code {
   line-height: 1.45;
 }
 
+/* ---------------------------------------------------------------------------
+   Documentation page
+--------------------------------------------------------------------------- */
+.docs-toc {
+  position: sticky;
+  top: calc(var(--topbar-height) + 1rem);
+}
+
+.docs-toc .list-group-item {
+  border: 0;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+.docs-code {
+  position: relative;
+}
+
+.docs-code pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem 3rem 1rem 1rem;
+  border-radius: 0.65rem;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.docs-code pre code {
+  color: inherit;
+  background: transparent;
+}
+
+.docs-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.docs-copy:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.docs-copy.copied {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
 #attendance-feed tr.flash-new {
   animation: rowFlash 1.4s ease-out;
 }

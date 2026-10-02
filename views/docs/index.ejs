@@ -1,0 +1,489 @@
+<%- include('../partials/header') %>
+
+<% const sampleDevice = devices.length ? devices[0] : null; %>
+<% const sampleSn = sampleDevice ? sampleDevice.sn : 'YOUR_DEVICE_SN'; %>
+<% const sampleApp = apps.length ? apps[0] : null; %>
+<% const sampleWebhook = sampleApp ? sampleApp.webhook_url : 'https://app-laravel.test/api/attendance/webhook'; %>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Dokumentasi API</h1>
+    <p class="text-muted mb-0">Referensi endpoint listener mesin, cara push data absensi, dan kontrak webhook ke aplikasi Laravel.</p>
+  </div>
+  <a href="/admin/devices" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-hdd-network me-1"></i> Kelola Mesin
+  </a>
+</div>
+
+<div class="row g-3">
+  <!-- TOC -->
+  <div class="col-lg-3">
+    <div class="card border-0 shadow-sm docs-toc">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-list-nested me-1"></i> Daftar Isi
+      </div>
+      <div class="list-group list-group-flush">
+        <a class="list-group-item list-group-item-action" href="#overview">Ringkasan &amp; Base URL</a>
+        <a class="list-group-item list-group-item-action" href="#quick-start">Quick Start</a>
+        <a class="list-group-item list-group-item-action" href="#listener-routes">Endpoint Listener Mesin</a>
+        <a class="list-group-item list-group-item-action" href="#push">Cara Push Data</a>
+        <a class="list-group-item list-group-item-action" href="#device-config">Konfigurasi Mesin</a>
+        <a class="list-group-item list-group-item-action" href="#dashboard-routes">Route Dashboard</a>
+        <a class="list-group-item list-group-item-action" href="#webhook">Webhook ke Laravel</a>
+        <a class="list-group-item list-group-item-action" href="#signature">Verifikasi Signature</a>
+        <a class="list-group-item list-group-item-action" href="#retry">Status &amp; Retry</a>
+        <a class="list-group-item list-group-item-action" href="#env">Konfigurasi .env</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="col-lg-9">
+    <!-- Overview -->
+    <div class="card border-0 shadow-sm mb-3" id="overview">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-info-circle me-1"></i> Ringkasan &amp; Base URL
+      </div>
+      <div class="card-body">
+        <p class="mb-3">
+          Middleware ini menerima <em>push</em> data absensi dari mesin fingerprint (ZKTeco / iClock / ADMS),
+          menyimpannya ke MySQL, lalu meneruskannya sebagai <strong>webhook JSON</strong> ke aplikasi Laravel
+          yang sudah dipetakan ke mesin tersebut.
+        </p>
+        <label class="form-label small text-muted mb-1">Base URL (alamat middleware ini)</label>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-base" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-base" class="mb-0"><code><%= baseUrl %></code></pre>
+        </div>
+        <div class="alert alert-light border small mt-3 mb-0">
+          <i class="bi bi-shield-lock me-1"></i>
+          Endpoint <code>/iclock/*</code> hanya menerima <strong>serial number (SN)</strong> yang terdaftar dan
+          berstatus <code>ACTIVE</code>. SN lain dibalas <code>403</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick start -->
+    <div class="card border-0 shadow-sm mb-3" id="quick-start">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-rocket-takeoff me-1"></i> Quick Start
+      </div>
+      <div class="card-body">
+        <ol class="mb-0 ps-3">
+          <li class="mb-2">
+            Daftarkan mesin di menu <a href="/admin/devices">Mesin</a>. Pastikan <strong>SN persis sama</strong>
+            dengan yang dikirim mesin (cek di menu Info/Comm mesin).
+          </li>
+          <li class="mb-2">
+            Buat aplikasi target di menu <a href="/admin/apps">Aplikasi</a> — isi <code>webhook_url</code>
+            (endpoint Laravel) dan catat <code>secret_key</code>-nya.
+          </li>
+          <li class="mb-2">
+            Hubungkan mesin ke aplikasi di menu <a href="/admin/mappings">Mapping</a>. Satu mesin boleh menuju
+            beberapa aplikasi.
+          </li>
+          <li class="mb-2">
+            Arahkan <em>cloud server / ADMS</em> pada mesin ke Base URL di atas (port sesuai <code>PORT</code>).
+          </li>
+          <li class="mb-0">
+            Uji dengan <code>curl</code> pada bagian <a href="#push">Cara Push Data</a>, lalu pantau di
+            <a href="/admin/attendance-logs">Log Absensi</a> dan <a href="/admin/forward-logs">Log Pengiriman</a>.
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Listener routes -->
+    <div class="card border-0 shadow-sm mb-3" id="listener-routes">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-hdd-network me-1"></i> Endpoint Listener Mesin
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 90px;">Method</th>
+              <th>Path</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge text-bg-success">GET</span></td>
+              <td><code>/iclock/cdata?SN=<%= sampleSn %></code></td>
+              <td>Handshake / heartbeat. Mengembalikan konfigurasi protokol ke mesin.</td>
+            </tr>
+            <tr>
+              <td><span class="badge text-bg-primary">POST</span></td>
+              <td><code>/iclock/cdata?SN=<%= sampleSn %>&amp;table=ATTLOG</code></td>
+              <td>Push data absensi (tab-separated). Baris selain <code>ATTLOG</code> di-acknowledge tanpa diteruskan.</td>
+            </tr>
+            <tr>
+              <td><span class="badge text-bg-success">GET</span></td>
+              <td><code>/iclock/getrequest?SN=<%= sampleSn %></code></td>
+              <td>Poll perintah dari server. v1 selalu membalas <code>OK</code> (tanpa perintah keluar).</td>
+            </tr>
+            <tr>
+              <td><span class="badge text-bg-primary">POST</span></td>
+              <td><code>/iclock/devicecmd?SN=<%= sampleSn %></code></td>
+              <td>Acknowledgement perintah dari mesin. Selalu membalas <code>OK</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="badge text-bg-primary">POST</span></td>
+              <td><code>/iclock/ping?SN=<%= sampleSn %></code></td>
+              <td>Cek konektivitas ringan; memperbarui <code>last_seen</code> mesin.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body border-top">
+        <div class="small text-muted">
+          Semua respons listener berupa <code>text/plain</code>. Respons sukses adalah <code>200 OK</code>.
+          Daftar kode error:
+        </div>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr><th>Status</th><th>Body</th><th>Arti</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>400</code></td><td><code>ERROR: MISSING_SN</code></td><td>Query <code>SN</code> tidak dikirim.</td></tr>
+              <tr><td><code>403</code></td><td><code>ERROR: DEVICE_NOT_REGISTERED</code></td><td>SN belum terdaftar di dashboard.</td></tr>
+              <tr><td><code>403</code></td><td><code>ERROR: DEVICE_INACTIVE</code></td><td>Mesin terdaftar tetapi berstatus <code>INACTIVE</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Push -->
+    <div class="card border-0 shadow-sm mb-3" id="push">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-cloud-arrow-up me-1"></i> Cara Push Data
+      </div>
+      <div class="card-body">
+        <h2 class="h6">1. Handshake (opsional, untuk uji koneksi)</h2>
+        <p class="small text-muted">
+          Mesin mengirim GET untuk meminta konfigurasi. Kalau SN valid, server membalas konfigurasi protokol.
+        </p>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-handshake" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-handshake" class="mb-0"><code>curl "<%= baseUrl %>/iclock/cdata?SN=<%= sampleSn %>"</code></pre>
+        </div>
+
+        <h2 class="h6 mt-4">2. Push absensi (ATTLOG)</h2>
+        <p class="small text-muted mb-2">
+          Body berupa teks baris-per-absensi dengan pemisah <strong>tab</strong>. Format kolomnya:
+        </p>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-format" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-format" class="mb-0"><code>PIN &lt;TAB&gt; DateTime &lt;TAB&gt; Status &lt;TAB&gt; Verify &lt;TAB&gt; WorkCode</code></pre>
+        </div>
+        <div class="table-responsive my-2">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Kolom</th><th>Contoh</th><th>Keterangan</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>PIN</code></td><td><code>1001</code></td><td>ID user di mesin (<code>user_id_finger</code>).</td></tr>
+              <tr><td><code>DateTime</code></td><td><code>2026-01-02 08:15:30</code></td><td>Waktu absen, format <code>YYYY-MM-DD HH:mm:ss</code>.</td></tr>
+              <tr><td><code>Status</code></td><td><code>0</code></td><td>Mode in/out: <code>0</code> = masuk, <code>1</code> = keluar, dst.</td></tr>
+              <tr><td><code>Verify</code></td><td><code>1</code></td><td>Metode verifikasi: <code>1</code> = fingerprint, <code>15</code> = face, dst.</td></tr>
+              <tr><td><code>WorkCode</code></td><td><code>0</code></td><td>Kode pekerjaan (opsional, tidak diteruskan).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="small text-muted mb-2">
+          Kirim satu atau beberapa baris sekaligus (pisahkan dengan newline):
+        </p>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-attlog" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-attlog" class="mb-0"><code>1001&lt;TAB&gt;2026-01-02 08:15:30&lt;TAB&gt;0&lt;TAB&gt;1&lt;TAB&gt;0
+1002&lt;TAB&gt;2026-01-02 08:16:02&lt;TAB&gt;0&lt;TAB&gt;15&lt;TAB&gt;0</code></pre>
+        </div>
+
+        <p class="small text-muted mt-3 mb-2">
+          Contoh memakai <code>curl</code> (karakter tab biasa ditulis sebagai <code>\t</code>):
+        </p>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-curl-attlog" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-curl-attlog" class="mb-0"><code>printf '1001\t2026-01-02 08:15:30\t0\t1\t0' &gt; attlog.txt
+
+curl -X POST "<%= baseUrl %>/iclock/cdata?SN=<%= sampleSn %>&amp;table=ATTLOG" \
+  -H "Content-Type: text/plain" \
+  --data-binary @attlog.txt</code></pre>
+        </div>
+
+        <div class="alert alert-success border-0 small mt-3 mb-0">
+          <i class="bi bi-check2-circle me-1"></i>
+          Mesin dibalas <code>200 OK</code> segera setelah data tersimpan. Pengiriman ke Laravel berjalan di
+          belakang layar, jadi mesin tidak pernah menunggu aplikasi target yang lambat/offline.
+        </div>
+        <div class="alert alert-warning border-0 small mt-2 mb-0">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Request JSON <strong>tidak</strong> didukung di endpoint ini — body harus berupa teks tab-separated
+          sesuai protokol iClock.
+        </div>
+      </div>
+    </div>
+
+    <!-- Device config -->
+    <div class="card border-0 shadow-sm mb-3" id="device-config">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-gear me-1"></i> Konfigurasi Mesin
+      </div>
+      <div class="card-body">
+        <p class="small text-muted">
+          Arahkan <em>cloud server / ADMS</em> pada mesin fingerprint ke host middleware:
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr><th>Setting Mesin</th><th>Nilai</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Server Address</td><td><code><%= host %></code></td></tr>
+              <tr><td>Server Port</td><td><code><%= port %></code></td></tr>
+              <tr><td>Endpoint Path</td><td><code>/iclock/cdata</code></td></tr>
+              <tr><td>Comm / Enable ADMS</td><td><code>ON</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="small text-muted mt-3">
+          <i class="bi bi-lightbulb me-1"></i>
+          Setelah <code>Realtime=1</code> dikembalikan saat handshake, mesin akan langsung mengirim setiap scan
+          tanpa menunggu interval.
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard routes -->
+    <div class="card border-0 shadow-sm mb-3" id="dashboard-routes">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-window-stack me-1"></i> Route Dashboard
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr><th>Method</th><th>Path</th><th>Keterangan</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/login</code></td><td>Form login.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/login</code></td><td>Proses login.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/logout</code></td><td>Keluar dari sesi.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin</code></td><td>Overview &amp; statistik.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/devices</code></td><td>Daftar mesin.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/devices/create</code></td><td>Form tambah mesin.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/admin/devices</code></td><td>Simpan mesin baru.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/devices/:id/edit</code></td><td>Form edit mesin.</td></tr>
+            <tr><td><span class="badge text-bg-warning">PUT</span></td><td><code>/admin/devices/:id</code></td><td>Update mesin.</td></tr>
+            <tr><td><span class="badge text-bg-danger">DELETE</span></td><td><code>/admin/devices/:id</code></td><td>Hapus mesin.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/apps</code></td><td>Daftar aplikasi target.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/apps/create</code></td><td>Form tambah aplikasi.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/admin/apps</code></td><td>Simpan aplikasi baru.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/apps/:id/edit</code></td><td>Form edit aplikasi.</td></tr>
+            <tr><td><span class="badge text-bg-warning">PUT</span></td><td><code>/admin/apps/:id</code></td><td>Update aplikasi.</td></tr>
+            <tr><td><span class="badge text-bg-danger">DELETE</span></td><td><code>/admin/apps/:id</code></td><td>Hapus aplikasi.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/admin/apps/:id/regenerate-secret</code></td><td>Regenerasi secret key aplikasi.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/mappings</code></td><td>Daftar mapping device &rarr; app.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/admin/mappings</code></td><td>Tambah mapping.</td></tr>
+            <tr><td><span class="badge text-bg-danger">DELETE</span></td><td><code>/admin/mappings/:id</code></td><td>Hapus mapping.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/attendance-logs</code></td><td>Daftar log absensi.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/attendance-logs/:id</code></td><td>Detail log absensi &amp; status forward.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/forward-logs</code></td><td>Daftar log pengiriman.</td></tr>
+            <tr><td><span class="badge text-bg-primary">POST</span></td><td><code>/admin/forward-logs/:id/retry</code></td><td>Kirim ulang manual.</td></tr>
+            <tr><td><span class="badge text-bg-success">GET</span></td><td><code>/admin/docs</code></td><td>Halaman dokumentasi ini.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body border-top small text-muted">
+        <i class="bi bi-lock me-1"></i> Semua route <code>/admin/*</code> dilindungi sesi login.
+        Method <code>PUT</code>/<code>DELETE</code> dikirim lewat form dengan <code>?_method=PUT</code> /
+        <code>?_method=DELETE</code>.
+      </div>
+    </div>
+
+    <!-- Webhook -->
+    <div class="card border-0 shadow-sm mb-3" id="webhook">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-send me-1"></i> Webhook ke Laravel
+      </div>
+      <div class="card-body">
+        <p class="small text-muted">
+          Setiap absensi yang masuk ke aplikasi target dikirim sebagai <code>HTTP POST</code> JSON ke
+          <code>webhook_url</code> aplikasi tersebut.
+        </p>
+        <% if (sampleApp) { %>
+          <div class="alert alert-light border small d-flex gap-2 align-items-start">
+            <i class="bi bi-box-seam mt-1"></i>
+            <div>
+              Contoh aplikasi terdaftar: <strong><%= sampleApp.app_name %></strong><br>
+              <code class="text-break"><%= sampleApp.webhook_url %></code>
+            </div>
+          </div>
+        <% } %>
+
+        <h2 class="h6">Payload</h2>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-payload" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-payload" class="mb-0"><code>{
+  "event": "attendance.created",
+  "device": {
+    "sn": "<%= sampleSn %>",
+    "name": "<%= sampleDevice ? sampleDevice.name : 'Lobby' %>",
+    "location": "<%= sampleDevice && sampleDevice.location ? sampleDevice.location : 'Gedung A' %>"
+  },
+  "attendance": {
+    "id": 12,
+    "user_id": "1001",
+    "timestamp": "2026-01-02 08:15:30",
+    "verify_mode": "1",
+    "in_out_mode": "0"
+  },
+  "received_at": "2026-01-02 08:15:31"
+}</code></pre>
+        </div>
+
+        <h2 class="h6 mt-4">Header</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Header</th><th>Nilai</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>Content-Type</code></td><td><code>application/json</code></td></tr>
+              <tr><td><code>Accept</code></td><td><code>application/json</code></td></tr>
+              <tr><td><code>User-Agent</code></td><td><code>express-absen-relay/1.0</code></td></tr>
+              <tr><td><code>X-Relay-Event</code></td><td><code>attendance.created</code></td></tr>
+              <tr><td><code>X-Relay-Secret</code></td><td>Secret key aplikasi target.</td></tr>
+              <tr><td><code>X-Relay-Signature</code></td><td><code>sha256=&lt;HMAC_SHA256(secret, rawBody)&gt;</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="docs-code mt-3">
+          <button type="button" class="docs-copy" data-copy="code-curl-webhook" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-curl-webhook" class="mb-0"><code>POST <%= sampleWebhook %>
+Content-Type: application/json
+X-Relay-Event: attendance.created
+X-Relay-Secret: &lt;secret_key&gt;
+X-Relay-Signature: sha256=&lt;hmac_sha256&gt;</code></pre>
+        </div>
+        <div class="alert alert-light border small mt-3 mb-0">
+          <i class="bi bi-reply me-1"></i>
+          Laravel cukup membalas <code>2xx</code> (mis. <code>200</code>/<code>201</code>) sebagai tanda sukses.
+          Respons non-<code>2xx</code> atau timeout dianggap gagal dan masuk antrean retry.
+        </div>
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div class="card border-0 shadow-sm mb-3" id="signature">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-shield-check me-1"></i> Verifikasi Signature (Laravel)
+      </div>
+      <div class="card-body">
+        <p class="small text-muted">
+          Hitung HMAC-SHA256 atas <strong>raw request body</strong> dengan <code>secret_key</code> aplikasi,
+          lalu bandingkan secara konstan dengan header <code>X-Relay-Signature</code>.
+        </p>
+        <div class="docs-code">
+          <button type="button" class="docs-copy" data-copy="code-php" title="Salin">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <pre id="code-php" class="mb-0"><code>&lt;?php
+
+$secret    = config('services.relay.secret');
+$signature = 'sha256=' . hash_hmac('sha256', $request-&gt;getContent(), $secret);
+
+abort_unless(
+    hash_equals($signature, (string) $request-&gt;header('X-Relay-Signature')),
+    401
+);</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Retry -->
+    <div class="card border-0 shadow-sm mb-3" id="retry">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-arrow-repeat me-1"></i> Status &amp; Retry
+      </div>
+      <div class="card-body">
+        <h2 class="h6">Status pengiriman (per aplikasi target)</h2>
+        <div class="table-responsive mb-3">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Status</th><th>Arti</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="badge text-bg-warning">PENDING</span></td><td>Menunggu dikirim.</td></tr>
+              <tr><td><span class="badge text-bg-success">SUCCESS</span></td><td>Target membalas <code>2xx</code>.</td></tr>
+              <tr><td><span class="badge text-bg-danger">FAILED</span></td><td>Gagal (non-<code>2xx</code>, timeout, atau target non-aktif).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 class="h6">Status agregat (log absensi)</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Status</th><th>Arti</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="badge text-bg-success">SUCCESS</span></td><td>Semua target berhasil.</td></tr>
+              <tr><td><span class="badge text-bg-info">PARTIAL</span></td><td>Sebagian target berhasil.</td></tr>
+              <tr><td><span class="badge text-bg-danger">FAILED</span></td><td>Semua target gagal.</td></tr>
+              <tr><td><span class="badge text-bg-warning">PENDING</span></td><td>Masih ada target yang berstatus pending.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="small text-muted mt-3 mb-0 ps-3">
+          <li>Pengiriman gagal diulang otomatis oleh scheduler dengan <em>exponential backoff</em> sampai batas <code>RELAY_MAX_RETRY</code>.</li>
+          <li>Bisa diulang manual dari <a href="/admin/forward-logs">Log Pengiriman</a> atau halaman detail log absensi.</li>
+          <li>Kegagalan ke satu aplikasi tidak mempengaruhi aplikasi lain maupun penyimpanan log lokal.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Env -->
+    <div class="card border-0 shadow-sm mb-3" id="env">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-sliders me-1"></i> Konfigurasi .env
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr><th>Variabel</th><th>Default</th><th>Keterangan</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>PORT</code></td><td><code>3331</code></td><td>Port HTTP server.</td></tr>
+            <tr><td><code>SESSION_SECRET</code></td><td>—</td><td>Wajib diganti di produksi.</td></tr>
+            <tr><td><code>DB_*</code></td><td>root@127.0.0.1</td><td>Kredensial MySQL.</td></tr>
+            <tr><td><code>RELAY_TIMEOUT_MS</code></td><td><code>10000</code></td><td>Timeout webhook.</td></tr>
+            <tr><td><code>RELAY_MAX_RETRY</code></td><td><code>5</code></td><td>Maksimal percobaan ulang.</td></tr>
+            <tr><td><code>RELAY_RETRY_INTERVAL_SECONDS</code></td><td><code>60</code></td><td>Basis backoff.</td></tr>
+            <tr><td><code>RELAY_RETRY_CRON</code></td><td><code>* * * * *</code></td><td>Jadwal scheduler retry.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

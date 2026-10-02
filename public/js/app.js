@@ -68,6 +68,38 @@
   });
 
   // -------------------------------------------------------------------------
+  // Copy-to-clipboard buttons (documentation code blocks)
+  // -------------------------------------------------------------------------
+  document.querySelectorAll('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const target = document.getElementById(button.dataset.copy);
+      if (!target) return;
+
+      const text = target.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (error) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      const original = button.innerHTML;
+      button.innerHTML = '<i class="bi bi-check2"></i>';
+      button.classList.add('copied');
+      window.setTimeout(() => {
+        button.innerHTML = original;
+        button.classList.remove('copied');
+      }, 1500);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Response body modal
   // -------------------------------------------------------------------------
   const responseModalEl = document.getElementById('responseModal');
