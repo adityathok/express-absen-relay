@@ -52,7 +52,8 @@ npm start                 # atau: npm run dev (auto-reload)
 ```
 
 Dashboard berjalan di `http://localhost:3331`. Login awal mengikuti `ADMIN_USERNAME` / `ADMIN_PASSWORD`
-(default `admin` / `admin123`) — **segera ganti** dengan:
+(default `admin` / `admin123`) — **segera ganti**. Bisa langsung dari dashboard melalui menu akun di
+pojok kiri bawah → **Edit Profil** (ubah username/password), atau lewat CLI:
 
 ```bash
 npm run reset-password -- admin PASSWORD_BARU

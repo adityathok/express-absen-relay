@@ -22,6 +22,10 @@ async function create({ username, password }) {
   return result.insertId;
 }
 
+async function updateUsername(id, username) {
+  await db.query('UPDATE users SET username = ? WHERE id = ?', [username, id]);
+}
+
 async function updatePassword(id, password) {
   await db.query('UPDATE users SET password = ? WHERE id = ?', [password, id]);
 }
@@ -31,4 +35,4 @@ async function count() {
   return rows[0].total;
 }
 
-module.exports = { findByUsername, findById, create, updatePassword, count };
+module.exports = { findByUsername, findById, create, updateUsername, updatePassword, count };

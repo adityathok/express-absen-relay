@@ -9,6 +9,7 @@ const appController = require('../controllers/appController');
 const mappingController = require('../controllers/mappingController');
 const logController = require('../controllers/logController');
 const docsController = require('../controllers/docsController');
+const profileController = require('../controllers/profileController');
 
 const router = express.Router();
 
@@ -45,6 +46,11 @@ router.get('/attendance-logs', logController.attendanceIndex);
 router.get('/attendance-logs/:id', logController.attendanceShow);
 router.get('/forward-logs', logController.forwardIndex);
 router.post('/forward-logs/:id/retry', logController.retryForward);
+
+// Profile & password
+router.get('/profile', profileController.show);
+router.put('/profile', profileController.updateProfile);
+router.put('/profile/password', profileController.updatePassword);
 
 // Documentation
 router.get('/docs', docsController.index);

@@ -69,6 +69,52 @@ function validateAppInput(body = {}) {
   return { valid: errors.length === 0, errors, data };
 }
 
+function validateProfileInput(body = {}) {
+  const errors = [];
+  const data = {
+    username: (body.username || '').trim(),
+  };
+
+  if (!isNonEmptyString(data.username)) {
+    errors.push('Username wajib diisi.');
+  } else {
+    if (data.username.length < 3) errors.push('Username minimal 3 karakter.');
+    if (data.username.length > 50) errors.push('Username maksimal 50 karakter.');
+    if (!/^[A-Za-z0-9._-]+$/.test(data.username)) {
+      errors.push('Username hanya boleh berisi huruf, angka, titik, underscore, dan strip.');
+    }
+  }
+
+  return { valid: errors.length === 0, errors, data };
+}
+
+function validatePasswordInput(body = {}) {
+  const errors = [];
+  const data = {
+    current_password: body.current_password || '',
+    new_password: body.new_password || '',
+    confirm_password: body.confirm_password || '',
+  };
+
+  if (!isNonEmptyString(data.current_password)) {
+    errors.push('Password saat ini wajib diisi.');
+  }
+  if (!isNonEmptyString(data.new_password)) {
+    errors.push('Password baru wajib diisi.');
+  } else {
+    if (data.new_password.length < 8) errors.push('Password baru minimal 8 karakter.');
+    if (data.new_password.length > 100) errors.push('Password baru maksimal 100 karakter.');
+  }
+  if (data.new_password !== data.confirm_password) {
+    errors.push('Konfirmasi password baru tidak cocok.');
+  }
+  if (data.current_password && data.current_password === data.new_password) {
+    errors.push('Password baru harus berbeda dari password saat ini.');
+  }
+
+  return { valid: errors.length === 0, errors, data };
+}
+
 function validateMappingInput(body = {}) {
   const errors = [];
   const data = {
@@ -90,4 +136,6 @@ module.exports = {
   validateDeviceInput,
   validateAppInput,
   validateMappingInput,
+  validateProfileInput,
+  validatePasswordInput,
 };
